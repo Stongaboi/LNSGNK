@@ -5,7 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { CheckCircle2, ExternalLink, Smartphone, TimerOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { CHECKOUT_BASE_URL } from "@/lib/mock-auth";
+import { CHECKOUT_BASE_URL } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
 type CheckoutQrProps = {

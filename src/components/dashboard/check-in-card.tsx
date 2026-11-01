@@ -5,7 +5,7 @@ import { Loader2, Sparkles, Clock, Brush, QrCode, AlertTriangle } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { MOCK_CLIENT_ID } from "@/lib/mock-auth";
+import { useProfile } from "@/components/auth-provider";
 import type { Visit } from "@/hooks/use-client-dashboard";
 
 const STATUS_COPY: Record<string, { title: string; body: string; icon: typeof Clock }> = {
@@ -37,11 +37,12 @@ type CheckInCardProps = {
 };
 
 export function CheckInCard({ activeVisit, onCheckedIn }: CheckInCardProps) {
+  const profile = useProfile();
   const [submitting, setSubmitting] = useState(false);
 
   const handleCheckIn = async () => {
     setSubmitting(true);
-    const { error } = await supabase.rpc("rpc_start_visit", { p_client_id: MOCK_CLIENT_ID });
+    const { error } = await supabase.rpc("rpc_start_visit", { p_client_id: profile.id });
     setSubmitting(false);
     if (error) {
       toast.error("Couldn't check you in", { description: error.message });

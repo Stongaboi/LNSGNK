@@ -12,7 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { MOCK_MANAGER_ID } from "@/lib/mock-auth";
+import { useProfile } from "@/components/auth-provider";
 import { formatCurrency } from "@/lib/utils";
 import type { AdminVisit } from "@/hooks/use-admin-dashboard";
 
@@ -30,6 +30,7 @@ type VoidDialogProps = {
 };
 
 export function VoidDialog({ visit, onOpenChange, onDone }: VoidDialogProps) {
+  const manager = useProfile();
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { reason: "", keepReward: false } });
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function VoidDialog({ visit, onOpenChange, onDone }: VoidDialogProps) {
     if (!visit) return;
     const { error } = await supabase.rpc("rpc_void_visit", {
       p_visit_id: visit.id,
-      p_manager_id: MOCK_MANAGER_ID,
+      p_manager_id: manager.id,
       p_reason: values.reason,
       p_keep_reward: values.keepReward,
     });

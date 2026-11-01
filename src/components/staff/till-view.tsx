@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { MOCK_EMPLOYEE_ID } from "@/lib/mock-auth";
+import { useProfile } from "@/components/auth-provider";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { QueueVisit } from "@/hooks/use-visit-queue";
 import { CheckoutQr } from "./checkout-qr";
@@ -21,6 +21,7 @@ type TillViewProps = {
 };
 
 export function TillView({ visit, onBack, onChanged }: TillViewProps) {
+  const employee = useProfile();
   const [services, setServices] = useState<Service[]>([]);
   const [lines, setLines] = useState<ServiceLine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +68,8 @@ export function TillView({ visit, onBack, onChanged }: TillViewProps) {
     const { error } = await supabase.rpc("rpc_add_service_line", {
       p_visit_id: visit.id,
       p_service_id: serviceId,
-      p_tech_id: MOCK_EMPLOYEE_ID,
-      p_employee_id: MOCK_EMPLOYEE_ID,
+      p_tech_id: employee.id,
+      p_employee_id: employee.id,
     });
     setAdding(null);
     if (error) {
@@ -83,7 +84,7 @@ export function TillView({ visit, onBack, onChanged }: TillViewProps) {
     setCompleting(true);
     const { data, error } = await supabase.rpc("rpc_employee_complete_visit", {
       p_visit_id: visit.id,
-      p_employee_id: MOCK_EMPLOYEE_ID,
+      p_employee_id: employee.id,
     });
     setCompleting(false);
     if (error) {

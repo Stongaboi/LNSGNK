@@ -9,7 +9,7 @@ A mobile-first Progressive Web App (PWA) for the **Giggles & Kurls** nail salon.
 
 All business rules (visit state transitions, pricing, QR expiry, loyalty rewards, clawbacks, audit logging) live in **Supabase Postgres RPC functions**. The front end only calls those RPCs and reads data.
 
-> ⚠️ **Mock auth:** There is no login yet. The app uses hardcoded IDs in `src/lib/mock-auth.ts` for the client, employee, and manager.
+Users sign in with **Supabase Auth** (email + password). Each auth user is linked to a row in `client` or `employee`, and that row decides their **role** (`client`, `employee` or `manager`). See [Authentication & roles](#-authentication--roles).
 
 ---
 
@@ -34,13 +34,15 @@ All business rules (visit state transitions, pricing, QR expiry, loyalty rewards
 
 | Route | Who | Purpose |
 | --- | --- | --- |
+| `/login` | Everyone | Email/password sign in + client sign-up |
+| `/auth/callback` | Everyone | Landing page for email confirmation links |
 | `/` | Client | Dashboard: check in, live visit status, loyalty card (x/5), active rewards, recent visits |
 | `/history` | Client | Full visit history: date, services, total paid, nail tech |
-| `/staff` | Employee | Live queue (`checked_in`, `in_service`) → Till → "Complete & Generate Checkout QR" |
+| `/staff` | Employee, Manager | Live queue (`checked_in`, `in_service`) → Till → "Complete & Generate Checkout QR" |
 | `/checkout/[token]` | Client | Opened from the QR: confirm and pay, "Thank You" screen, 1–5 star tech rating |
 | `/admin` | Manager | Revenue/visit/client metrics, last 10 visits, **Force Close** and **Void** actions |
 
-A floating pill navigation bar at the bottom of the screen switches between Client, History, Till and Manager. It's hidden on the checkout screen.
+A floating pill navigation bar shows **only the sections your role can open**, plus a sign-out button. It's hidden on login and checkout.
 
 ---
 
@@ -53,6 +55,8 @@ src/
 │   ├── globals.css              # Tailwind base + brand colour variables (pink / coral / lilac)
 │   ├── manifest.ts              # PWA web app manifest
 │   ├── page.tsx                 # "/": client dashboard
+│   ├── login/page.tsx           # "/login": sign in / create account
+│   ├── auth/callback/page.tsx   # "/auth/callback": email confirmation landing
 │   ├── history/page.tsx         # "/history": client visit history
 │   ├── staff/page.tsx           # "/staff": employee queue + till
 │   ├── checkout/[token]/page.tsx# "/checkout/:token": client checkout + rating
@@ -60,7 +64,8 @@ src/
 │
 ├── components/                  # Reusable React components
 │   ├── ui/                      # shadcn/ui primitives (button, dialog, checkbox, form…)
-│   ├── app-nav.tsx              # Floating bottom navigation between app areas
+│   ├── app-nav.tsx              # Role-aware floating navigation + sign out
+│   ├── auth/                    # RoleGuard, sign-in/sign-up forms, "account not linked" screen
 │   ├── brand-header.tsx         # Logo + salon name header
 │   ├── status-badge.tsx         # Coloured pill for visit statuses
 │   ├── dashboard/               # Client dashboard: hero, check-in card, loyalty card, rewards, recent visits
@@ -68,6 +73,9 @@ src/
 │   ├── staff/                   # Till: queue list, till view (service checkboxes, total), checkout QR
 │   ├── checkout/                # Star rating + per-tech rating form
 │   └── admin/                   # Metric cards, visits table, Force Close dialog, Void dialog
+│
+├── contexts/
+│   └── auth-context.tsx         # AuthProvider: Supabase session + role profile, useAuth(), useProfile()
 │
 ├── hooks/                       # Data-fetching hooks (Supabase queries + polling)
 │   ├── use-client-dashboard.ts  # Client, completed-visit count, rewards, loyalty config
@@ -79,8 +87,13 @@ src/
 │   └── client.ts                # Supabase client (project URL + publishable key)
 │
 └── lib/                         # Plain TypeScript helpers and constants
-    ├── mock-auth.ts             # Mock client/employee/manager IDs, checkout QR base URL, visit status groups
+    ├── constants.ts             # Checkout QR base URL + visit status groups
+    ├── roles.ts                 # Role types, route→role map, home route per role, safe redirect helper
+    ├── auth-errors.ts           # Friendly messages for Supabase Auth errors
     └── utils.ts                 # cn() class merger + formatCurrency() (ZAR)
+
+docs/sql/
+└── 001_link_auth_users.sql      # Adds auth_user_id columns + sign-up linking trigger
 
 public/
 ├── icon.svg                     # App / PWA icon
@@ -117,17 +130,18 @@ To set up a **new** Supabase project (e.g. staging):
    - **SQL Editor:** Dashboard → **SQL Editor** → **New query** → paste `schema.sql` → **Run**, or
    - **CLI:** put the file in `supabase/migrations/<timestamp>_init.sql`, then `supabase link --project-ref <new-ref>` and `supabase db push`.
 3. **Seed data.** Run the SQL below in the SQL Editor.
-4. Point `src/integrations/supabase/client.ts` at the new project.
+4. Run `docs/sql/001_link_auth_users.sql` (auth linking, see below).
+5. Point `src/integrations/supabase/client.ts` at the new project.
 
 #### Seed data for testing
 
 ```sql
--- Mock client (used by "/", "/history" and "/checkout")
+-- Test client (link it by signing up with its email or phone)
 INSERT INTO client (id, phone, full_name)
 VALUES ('11111111-1111-1111-1111-111111111101', '+27821234567', 'Test Client')
 ON CONFLICT (id) DO NOTHING;
 
--- Mock employee (used by "/staff") and manager (used by "/admin")
+-- Test employee and manager (set their emails, then sign up with them)
 INSERT INTO employee (id, full_name, role) VALUES
   ('11111111-1111-1111-1111-111111111102', 'Demo Staff', 'employee'),
   ('11111111-1111-1111-1111-111111111111', 'Aunt Manager', 'manager')
@@ -148,7 +162,38 @@ SELECT 5, 100.00, 60, true
 WHERE NOT EXISTS (SELECT 1 FROM loyalty_config WHERE is_active);
 ```
 
-> 🔐 **Security note:** Row Level Security is currently **disabled** and the `anon` role has broad table grants, which is what lets mock auth work. Before going live: add Supabase Auth, enable RLS on every table, restrict grants, and make the RPCs check `auth.uid()` and roles instead of trusting passed-in IDs.
+> 🔐 **Security note:** Row Level Security is currently **disabled** and the `anon` role has broad table grants. The role checks in the app only control **what the UI shows**. Anyone with the publishable key can still call the RPCs directly. Before going live: enable RLS on every table, revoke `anon` grants, and make the RPCs derive the caller from `auth.uid()` and check their role instead of trusting passed-in IDs.
+
+---
+
+## 🔑 Authentication & roles
+
+### 1. Link auth users to profiles
+Run [`docs/sql/001_link_auth_users.sql`](docs/sql/001_link_auth_users.sql) in **Supabase → SQL Editor**. It:
+- adds a unique `auth_user_id` column (→ `auth.users.id`) to `employee` and `client`
+- adds an `AFTER INSERT` trigger on `auth.users` that, on sign-up:
+  1. links an **active employee** with the same email (staff or manager role), otherwise
+  2. links an **existing client** with the same email or phone, otherwise
+  3. creates a **new client** from the sign-up form's name and phone.
+
+### 2. How roles resolve
+`AuthProvider` (`src/contexts/auth-context.tsx`) listens to `onAuthStateChange`, then looks up `employee.auth_user_id` (role = `employee.role`) and falls back to `client.auth_user_id` (role = `client`).
+
+| Role | Can open | Lands on |
+| --- | --- | --- |
+| `client` | `/`, `/history`, `/checkout/*` | `/` |
+| `employee` | `/staff` | `/staff` |
+| `manager` | `/staff`, `/admin` | `/admin` |
+
+`<RoleGuard allow={[...]}>` wraps each page. Signed-out users go to `/login?next=…` and return there after signing in (so a scanned QR goes straight back to checkout). Users with the wrong role are sent to their own home. A client opening `/admin` lands on `/`.
+
+### 3. Supabase Auth settings
+- **Authentication → URL Configuration → Redirect URLs:** add `http://localhost:3000/auth/callback` and your production `https://<domain>/auth/callback`.
+- **Email confirmation:** if it's on (the default), new users must click the emailed link before they can sign in. For quick local testing you can turn it off under **Authentication → Providers → Email**.
+
+### 4. Creating test accounts
+1. Give the seeded rows emails you control (step 3 in the SQL file), e.g. `manager@…`, `staff@…`, `client@…`.
+2. Go to `/login` → **Create account** with each email. The employee emails link to staff profiles; the client email (or matching phone) links to the existing test client.
 
 ---
 
@@ -165,7 +210,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## 🧪 Test scenarios
 
-Use two browser tabs: one on `/` (client) and one on `/staff` or `/admin`. Each scenario starts from a client with **no open visit**.
+Sign in as the **client** in one browser and as **staff/manager** in another (or a private window), since sessions are per browser. Each scenario starts from a client with **no open visit**.
 
 ### 1. Check-in → Till → QR checkout (happy path)
 1. **`/`**: tap **Check In**. The card changes to *"You are checked in!"* (`rpc_start_visit`).
@@ -194,7 +239,12 @@ Use two browser tabs: one on `/` (client) and one on `/staff` or `/admin`. Each 
 4. ✅ The status becomes **Override**, revenue and **Completed visits** go up, the QR token is cleared, and the visit counts toward loyalty. The opened QR link is now invalid.
 - An empty reason is rejected by the form (and by the RPC).
 
-### 4. Void and loyalty clawback
+### 4. Role protection
+1. Signed in as the client, open `/admin` or `/staff`. ✅ You're redirected to `/`, and the nav shows only Client and History.
+2. Signed in as an employee, open `/admin`. ✅ You're redirected to `/staff`.
+3. Signed out, open a checkout link. ✅ You're sent to `/login`, and after signing in as the client you land back on the checkout page.
+
+### 5. Void and loyalty clawback
 1. Make sure the client has a **completed** visit. Ideally use the 5th visit that earned a reward in scenario 2.
 2. **`/admin`**: click **Void** on that visit, enter a **Reason**, and leave **Keep loyalty reward** **off**. Submit (`rpc_void_visit`).
 3. ✅ The status becomes **Voided** and revenue and completed visits go down. All of its service lines are voided. Any reward earned or redeemed on it is set to `voided`, so it disappears from **Your rewards** on `/`. An `audit_log` row with action `loyalty_clawback` is written.
@@ -212,5 +262,6 @@ FROM audit_log ORDER BY created_at DESC LIMIT 20;
 ## 🚀 Deploying
 
 1. Deploy to Vercel (or any Next.js host).
-2. Update `CHECKOUT_BASE_URL` in `src/lib/mock-auth.ts` to your production domain so the QR code points at the live checkout page.
-3. Before real users get access, replace mock auth with Supabase Auth and lock down RLS (see the security note above).
+2. Update `CHECKOUT_BASE_URL` in `src/lib/constants.ts` to your production domain so the QR code points at the live checkout page.
+3. Add the production `/auth/callback` URL to Supabase's Redirect URLs.
+4. Before real users get access, lock down RLS and the RPCs (see the security note above).

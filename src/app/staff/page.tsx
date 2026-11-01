@@ -5,10 +5,11 @@ import { MousePointerClick } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { QueueList } from "@/components/staff/queue-list";
 import { TillView } from "@/components/staff/till-view";
+import { RoleGuard } from "@/components/auth/role-guard";
 import { useVisitQueue, type QueueVisit } from "@/hooks/use-visit-queue";
 import { cn } from "@/lib/utils";
 
-export default function StaffTillPage() {
+function StaffTill() {
   const { visits, loading, error, refresh } = useVisitQueue();
   const [selected, setSelected] = useState<QueueVisit | null>(null);
 
@@ -47,5 +48,13 @@ export default function StaffTillPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function StaffTillPage() {
+  return (
+    <RoleGuard allow={["employee", "manager"]}>
+      <StaffTill />
+    </RoleGuard>
   );
 }

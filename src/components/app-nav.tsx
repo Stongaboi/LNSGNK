@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { History, Home, LayoutDashboard, Scissors } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { History, Home, LayoutDashboard, LogOut, Scissors } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { ROUTE_ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -12,18 +14,28 @@ const LINKS = [
   { href: "/admin", label: "Manager", icon: LayoutDashboard },
 ];
 
+const HIDDEN_ON = ["/checkout", "/login", "/auth"];
+
 export function AppNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { profile, signOut } = useAuth();
 
-  // Keep the checkout screen focused on paying.
-  if (pathname.startsWith("/checkout")) return null;
+  if (!profile || HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
+
+  const links = LINKS.filter((l) => ROUTE_ROLES[l.href].includes(profile.role));
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/login");
+  };
 
   return (
     <nav
       aria-label="App sections"
       className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit items-center gap-1 rounded-full border-2 border-primary/15 bg-card/95 p-1.5 shadow-xl shadow-primary/20 backdrop-blur"
     >
-      {LINKS.map(({ href, label, icon: Icon }) => {
+      {links.map(({ href, label, icon: Icon }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (
           <Link
@@ -36,10 +48,19 @@ export function AppNav() {
             )}
           >
             <Icon className="h-4 w-4" />
-            <span className={cn(!active && "hidden sm:inline")}>{label}</span>
+            <span className={cn(!active && links.length > 2 && "hidden sm:inline")}>{label}</span>
           </Link>
         );
       })}
+      <span className="mx-1 h-6 w-px bg-border" />
+      <button
+        onClick={handleSignOut}
+        aria-label="Sign out"
+        title={`Sign out${profile.fullName ? ` (${profile.fullName})` : ""}`}
+        className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-blush hover:text-primary"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
     </nav>
   );
 }

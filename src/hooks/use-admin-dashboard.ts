@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ACTIVE_VISIT_STATUSES, COMPLETED_VISIT_STATUSES } from "@/lib/mock-auth";
+import { ACTIVE_VISIT_STATUSES, COMPLETED_VISIT_STATUSES } from "@/lib/constants";
 
 export type AdminVisit = {
   id: string;

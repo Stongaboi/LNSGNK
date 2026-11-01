@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { QUEUE_VISIT_STATUSES } from "@/lib/mock-auth";
+import { QUEUE_VISIT_STATUSES } from "@/lib/constants";
 
 export type QueueVisit = {
   id: string;

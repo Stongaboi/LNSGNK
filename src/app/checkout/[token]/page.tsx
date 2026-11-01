@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { BrandHeader } from "@/components/brand-header";
 import { TechRating, type TechLines } from "@/components/checkout/tech-rating";
 import { supabase } from "@/integrations/supabase/client";
-import { MOCK_CLIENT_ID } from "@/lib/mock-auth";
+import { RoleGuard } from "@/components/auth/role-guard";
+import { useProfile } from "@/components/auth-provider";
 import { formatCurrency } from "@/lib/utils";
 
 type VisitInfo = { id: string; total: number };
@@ -34,8 +35,9 @@ function friendly(message: string) {
   return FRIENDLY_ERRORS[message] ?? message;
 }
 
-export default function CheckoutPage() {
+function Checkout() {
   const { token } = useParams<{ token: string }>();
+  const profile = useProfile();
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [visit, setVisit] = useState<VisitInfo | null>(null);
@@ -50,7 +52,7 @@ export default function CheckoutPage() {
         .maybeSingle();
 
       if (error || !data) return fail("Invalid visit or QR token.");
-      if (data.client_id !== MOCK_CLIENT_ID) return fail("QR does not belong to this client.");
+      if (data.client_id !== profile.id) return fail("QR does not belong to this client.");
       if (data.status !== "awaiting_checkout_scan") return fail("Visit is not awaiting checkout.");
       if (data.qr_expires_at && new Date(data.qr_expires_at).getTime() < Date.now()) return fail("QR has expired.");
 
@@ -79,14 +81,14 @@ export default function CheckoutPage() {
     };
 
     load();
-  }, [token]);
+  }, [token, profile.id]);
 
   const handleCheckout = async () => {
     if (!visit) return;
     setPhase("submitting");
     const { error } = await supabase.rpc("rpc_checkout_complete", {
       p_visit_id: visit.id,
-      p_client_id: MOCK_CLIENT_ID,
+      p_client_id: profile.id,
       p_token: token,
       p_amount_paid: visit.total,
     });
@@ -184,5 +186,13 @@ export default function CheckoutPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <RoleGuard allow={["client"]}>
+      <Checkout />
+    </RoleGuard>
   );
 }

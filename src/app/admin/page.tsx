@@ -8,9 +8,10 @@ import { MetricCards } from "@/components/admin/metric-cards";
 import { VisitsTable } from "@/components/admin/visits-table";
 import { ForceCloseDialog } from "@/components/admin/force-close-dialog";
 import { VoidDialog } from "@/components/admin/void-dialog";
+import { RoleGuard } from "@/components/auth/role-guard";
 import { useAdminDashboard, type AdminVisit } from "@/hooks/use-admin-dashboard";
 
-export default function ManagerDashboard() {
+function ManagerDashboard() {
   const { metrics, visits, loading, error, refresh } = useAdminDashboard();
   const [forceCloseVisit, setForceCloseVisit] = useState<AdminVisit | null>(null);
   const [voidVisit, setVoidVisit] = useState<AdminVisit | null>(null);
@@ -67,5 +68,13 @@ export default function ManagerDashboard() {
       />
       <VoidDialog visit={voidVisit} onOpenChange={(open) => !open && setVoidVisit(null)} onDone={refresh} />
     </main>
+  );
+}
+
+export default function ManagerDashboardPage() {
+  return (
+    <RoleGuard allow={["manager"]}>
+      <ManagerDashboard />
+    </RoleGuard>
   );
 }

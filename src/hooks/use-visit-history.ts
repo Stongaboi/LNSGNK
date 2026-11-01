@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ACTIVE_VISIT_STATUSES, MOCK_CLIENT_ID } from "@/lib/mock-auth";
+import { ACTIVE_VISIT_STATUSES } from "@/lib/constants";
 
 export type HistoryLine = {
   id: string;
@@ -24,7 +24,7 @@ export type HistoryVisit = {
 
 type RawVisit = Omit<HistoryVisit, "lines"> & { service_line: HistoryLine[] | null };
 
-export function useVisitHistory() {
+export function useVisitHistory(clientId: string) {
   const [visits, setVisits] = useState<HistoryVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function useVisitHistory() {
       .select(
         "id, status, opened_at, total, amount_paid, service_line(id, price, discount_amount, status, service:service_id(name), tech:serviced_by_employee_id(full_name))",
       )
-      .eq("client_id", MOCK_CLIENT_ID)
+      .eq("client_id", clientId)
       .not("status", "in", `(${ACTIVE_VISIT_STATUSES.join(",")})`)
       .order("opened_at", { ascending: false })
       .then(({ data, error }) => {
@@ -57,7 +57,7 @@ export function useVisitHistory() {
         }
         setLoading(false);
       });
-  }, []);
+  }, [clientId]);
 
   return { visits, loading, error };
 }

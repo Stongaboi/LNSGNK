@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { MOCK_MANAGER_ID } from "@/lib/mock-auth";
+import { useProfile } from "@/components/auth-provider";
 import { formatCurrency } from "@/lib/utils";
 import type { AdminVisit } from "@/hooks/use-admin-dashboard";
 
@@ -33,6 +33,7 @@ type ForceCloseDialogProps = {
 };
 
 export function ForceCloseDialog({ visit, onOpenChange, onDone }: ForceCloseDialogProps) {
+  const manager = useProfile();
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { reason: "", amount: "" } });
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function ForceCloseDialog({ visit, onOpenChange, onDone }: ForceCloseDial
     if (!visit) return;
     const { error } = await supabase.rpc("rpc_manager_override", {
       p_visit_id: visit.id,
-      p_manager_id: MOCK_MANAGER_ID,
+      p_manager_id: manager.id,
       p_amount_paid: Number(values.amount),
       p_reason: values.reason,
     });

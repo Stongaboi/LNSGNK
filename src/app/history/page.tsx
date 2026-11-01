@@ -3,11 +3,14 @@
 import { AlertCircle, Loader2, Smile } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { HistoryVisitCard } from "@/components/history/history-visit-card";
+import { RoleGuard } from "@/components/auth/role-guard";
+import { useProfile } from "@/components/auth-provider";
 import { useVisitHistory } from "@/hooks/use-visit-history";
 import { formatCurrency } from "@/lib/utils";
 
-export default function HistoryPage() {
-  const { visits, loading, error } = useVisitHistory();
+function HistoryView() {
+  const profile = useProfile();
+  const { visits, loading, error } = useVisitHistory(profile.id);
   const totalSpent = visits
     .filter((v) => v.status !== "voided")
     .reduce((sum, v) => sum + v.amount_paid, 0);
@@ -55,5 +58,13 @@ export default function HistoryPage() {
         ))}
       </ul>
     </main>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <RoleGuard allow={["client"]}>
+      <HistoryView />
+    </RoleGuard>
   );
 }
