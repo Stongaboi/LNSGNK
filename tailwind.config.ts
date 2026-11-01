@@ -9,7 +9,13 @@ export default {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-nunito)', 'sans-serif'],
+  			display: ['var(--font-fredoka)', 'sans-serif']
+  		},
   		colors: {
+  			lilac: 'hsl(var(--lilac))',
+  			blush: 'hsl(var(--blush))',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
