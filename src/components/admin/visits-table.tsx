@@ -2,7 +2,7 @@ import { Ban, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import type { AdminVisit } from "@/hooks/use-admin-dashboard";
-import { StatusBadge } from "./status-badge";
+import { StatusBadge } from "@/components/status-badge";
 
 const FORCE_CLOSE_STATUSES = ["awaiting_checkout_scan", "flagged_stale"];
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { AppNav } from "@/components/app-nav";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -33,7 +34,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${fredoka.variable} ${nunito.variable} antialiased`}>
-        {children}
+        <div className="pb-20">{children}</div>
+        <AppNav />
         <Toaster position="top-center" richColors />
       </body>
     </html>

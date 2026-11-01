@@ -1,4 +1,5 @@
-import { CalendarHeart, Smile } from "lucide-react";
+import Link from "next/link";
+import { CalendarHeart, ChevronRight, Smile } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Visit } from "@/hooks/use-client-dashboard";
 
@@ -12,7 +13,17 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
 export function VisitHistory({ visits }: { visits: Visit[] }) {
   return (
     <section className="animate-rise" style={{ animationDelay: "240ms" }}>
-      <h2 className="mb-3 font-display text-2xl font-bold">Recent visits</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-2xl font-bold">Recent visits</h2>
+        {visits.length > 0 && (
+          <Link
+            href="/history"
+            className="flex items-center gap-1 rounded-full bg-blush px-3 py-1.5 text-sm font-bold text-primary hover:bg-primary hover:text-primary-foreground"
+          >
+            See all <ChevronRight className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
       {visits.length === 0 ? (
         <div className="flex flex-col items-center rounded-[2rem] bg-card p-8 text-center shadow-md">
           <div className="grid h-16 w-16 place-items-center rounded-full bg-blush text-primary">
