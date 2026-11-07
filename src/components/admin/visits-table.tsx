@@ -77,8 +77,8 @@ export function VisitsTable({ visits, onForceClose, onVoid }: VisitsTableProps) 
       </ul>
 
       {/* Desktop: table */}
-      <div className="hidden overflow-hidden rounded-[2rem] bg-card shadow-md md:block">
-        <table className="w-full text-left text-sm">
+      <div className="hidden overflow-x-auto rounded-[2rem] bg-card shadow-md md:block">
+        <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-blush text-xs font-bold uppercase tracking-wider text-primary">
             <tr>
               <th className="px-5 py-4">Client</th>
