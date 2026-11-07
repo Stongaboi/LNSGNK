@@ -1,5 +1,5 @@
 // Base URL encoded into the checkout QR code.
-export const CHECKOUT_BASE_URL = "http://localhost:3000";
+export const CHECKOUT_BASE_URL = "https://lnsgnk-klein-brain-s-projects.vercel.app/";
 
 // Visits staff can still add services to.
 export const QUEUE_VISIT_STATUSES = ["checked_in", "in_service"] as const;
