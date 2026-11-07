@@ -30,45 +30,50 @@ export function useAdminDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [revenueRes, clientsRes, inSalonRes, recentRes] = await Promise.all([
-      supabase
-        .from("visit")
-        .select("amount_paid", { count: "exact" })
-        .in("status", [...COMPLETED_VISIT_STATUSES])
-        .is("voided_at", null),
-      supabase.from("client").select("id", { count: "exact", head: true }).is("anonymised_at", null),
-      supabase.from("visit").select("id", { count: "exact", head: true }).in("status", [...ACTIVE_VISIT_STATUSES]),
-      supabase
-        .from("visit")
-        .select(
-          "id, status, opened_at, total, amount_paid, client:client_id(full_name, phone), employee:created_by_employee_id(full_name)",
-        )
-        .order("opened_at", { ascending: false })
-        .limit(10),
-    ]);
+    try {
+      const [revenueRes, clientsRes, inSalonRes, recentRes] = await Promise.all([
+        supabase
+          .from("visit")
+          .select("amount_paid", { count: "exact" })
+          .in("status", [...COMPLETED_VISIT_STATUSES])
+          .is("voided_at", null),
+        supabase.from("client").select("id", { count: "exact", head: true }).is("anonymised_at", null),
+        supabase.from("visit").select("id", { count: "exact", head: true }).in("status", [...ACTIVE_VISIT_STATUSES]),
+        supabase
+          .from("visit")
+          .select(
+            "id, status, opened_at, total, amount_paid, client:client_id(full_name, phone), employee:created_by_employee_id(full_name)",
+          )
+          .order("opened_at", { ascending: false })
+          .limit(10),
+      ]);
 
-    const firstError = revenueRes.error || clientsRes.error || inSalonRes.error || recentRes.error;
-    if (firstError) {
-      setError(firstError.message);
+      if (recentRes.error) throw recentRes.error;
+      if (revenueRes.error) throw revenueRes.error;
+      if (clientsRes.error) throw clientsRes.error;
+      if (inSalonRes.error) throw inSalonRes.error;
+
+      setMetrics({
+        revenue: (revenueRes.data ?? []).reduce((sum, v) => sum + Number(v.amount_paid), 0),
+        completedVisits: revenueRes.count ?? 0,
+        activeClients: clientsRes.count ?? 0,
+        inSalonNow: inSalonRes.count ?? 0,
+      });
+
+      setVisits(
+        ((recentRes.data ?? []) as unknown as AdminVisit[]).map((v) => ({
+          ...v,
+          total: Number(v.total),
+          amount_paid: Number(v.amount_paid),
+        })),
+      );
+      setError(null);
+    } catch (err: any) {
+      console.error("Dashboard Error:", err);
+      setError(err.message || "Failed to load dashboard data");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setMetrics({
-      revenue: (revenueRes.data ?? []).reduce((sum, v) => sum + Number(v.amount_paid), 0),
-      completedVisits: revenueRes.count ?? 0,
-      activeClients: clientsRes.count ?? 0,
-      inSalonNow: inSalonRes.count ?? 0,
-    });
-    setVisits(
-      ((recentRes.data ?? []) as unknown as AdminVisit[]).map((v) => ({
-        ...v,
-        total: Number(v.total),
-        amount_paid: Number(v.amount_paid),
-      })),
-    );
-    setError(null);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
