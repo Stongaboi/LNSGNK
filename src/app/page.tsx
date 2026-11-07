@@ -20,7 +20,7 @@ function ClientDashboard() {
   const { data, error, loading, refresh } = useClientDashboard(profile.id);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // 1. Handle Supabase Auth redirects (magic links)
+  // 1. Handle Supabase Auth redirects (if you turn email confirmation back on later)
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes("access_token")) {
