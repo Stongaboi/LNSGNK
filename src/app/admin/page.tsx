@@ -17,7 +17,7 @@ function ManagerDashboard() {
   const [voidVisit, setVoidVisit] = useState<AdminVisit | null>(null);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[90rem] px-4 pb-16">
+    <main className="mx-auto min-h-screen w-full max-w-[90rem] px-4 pb-32">
       <div className="flex items-center justify-between">
         <BrandHeader />
         <span className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-accent-foreground">
