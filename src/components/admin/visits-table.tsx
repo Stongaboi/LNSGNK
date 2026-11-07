@@ -55,8 +55,8 @@ export function VisitsTable({ visits, onForceClose, onVoid }: VisitsTableProps) 
 
   return (
     <>
-      {/* Mobile: cards */}
-      <ul className="space-y-3 md:hidden">
+      {/* Mobile: cards (Shows on everything smaller than a large desktop) */}
+      <ul className="space-y-3 lg:hidden">
         {visits.map((v) => (
           <li key={v.id} className="rounded-[1.75rem] bg-card p-4 shadow-md">
             <div className="flex items-start justify-between gap-3">
@@ -76,9 +76,9 @@ export function VisitsTable({ visits, onForceClose, onVoid }: VisitsTableProps) 
         ))}
       </ul>
 
-      {/* Desktop: table */}
-      <div className="hidden overflow-x-auto rounded-[2rem] bg-card shadow-md md:block">
-        <table className="w-full text-left text-sm whitespace-nowrap">
+      {/* Desktop: table (Shows ONLY on large screens) */}
+      <div className="hidden w-full max-w-full overflow-x-auto rounded-[2rem] bg-card shadow-md lg:block">
+        <table className="w-full min-w-[800px] text-left text-sm whitespace-nowrap">
           <thead className="bg-blush text-xs font-bold uppercase tracking-wider text-primary">
             <tr>
               <th className="px-5 py-4">Client</th>
